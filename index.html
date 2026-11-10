@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake & Ladder — Adventure Board</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap');
+:root{--navy:#17213d;--purple:#7558df;--gold:#ffca58;--cream:#fff9e9;--muted:#68728c}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;color:var(--navy);font-family:'Nunito',system-ui,sans-serif;background:linear-gradient(145deg,#b9e9df,#d9d5ff 55%,#ffe4ba);overflow-x:hidden}
+body:before,body:after{content:"";position:fixed;border-radius:50%;filter:blur(2px);opacity:.35;pointer-events:none}
+body:before{width:360px;height:360px;background:#fff;top:-160px;left:-80px}body:after{width:440px;height:440px;background:#fff2bb;bottom:-240px;right:-130px}
+header{text-align:center;padding:20px 12px 12px;position:relative;z-index:1}
+h1{font-family:'Baloo 2',sans-serif;font-size:clamp(32px,5vw,52px);line-height:1;margin:0;color:#2b2756;text-shadow:0 3px #fff}
+header p{margin:7px 0 0;color:#535d7d;font-weight:800}
+.shell{max-width:1160px;margin:auto;padding:10px 16px 32px;display:grid;grid-template-columns:minmax(320px,1fr) 320px;gap:18px;position:relative;z-index:1}
+.panel{background:rgba(255,255,255,.88);border:3px solid #fff;border-radius:26px;box-shadow:0 16px 35px #39416b25}
+.board-panel{padding:13px}
+.board-top{display:flex;justify-content:space-between;align-items:center;padding:2px 5px 10px;font-weight:900;color:#4b477e}
+.board-top span:last-child{color:#e18a32}
+.board{display:grid;grid-template-columns:repeat(10,1fr);aspect-ratio:1;gap:3px;padding:7px;border-radius:19px;background:linear-gradient(135deg,#f7d98d,#e7ad58);position:relative;box-shadow:inset 0 3px 8px #8b572b45}
+.cell{position:relative;border-radius:8px;display:flex;align-items:flex-start;justify-content:flex-start;padding:3px 4px;background:#fff8df;color:#796344;font-size:clamp(8px,1.25vw,13px);font-weight:1000;box-shadow:inset 0 -2px #e8d9b6;overflow:hidden}
+.cell:nth-child(4n+2){background:#e5f7e9}.cell:nth-child(4n+3){background:#e4efff}.cell:nth-child(4n){background:#ffeadb}
+.cell.ladder{background:#d4f3d9}.cell.snake{background:#ffdce0}
+.cell .mark{position:absolute;right:1px;bottom:0;font-size:clamp(13px,2.1vw,23px);filter:drop-shadow(0 2px 1px #0002)}
+.route-art{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 14px);z-index:2;pointer-events:none;overflow:visible}.route-art .ladder-rail{stroke:#8a4d2d;stroke-width:1.25;stroke-linecap:round;fill:none}.route-art .ladder-rung{stroke:#c17b45;stroke-width:.85;stroke-linecap:round}.route-art .snake-body{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 .6px 1px #0004)}.route-art .snake-belly{fill:none;stroke:#fff2bf;stroke-width:1.15;stroke-linecap:round;stroke-dasharray:1.2 2.1;opacity:.9}.route-art .snake-head{stroke:#fff;stroke-width:.6}.route-art .snake-eye{fill:#fff}.tokens{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:2px;z-index:3}
+.token{width:clamp(19px,2.8vw,29px);height:clamp(19px,2.8vw,29px);border-radius:9px 9px 12px 12px;border:2px solid #fff;box-shadow:0 3px 7px #0006, inset 0 2px 2px #ffffff88;position:relative;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:1000;text-shadow:0 1px 2px #0008;transform:rotate(45deg)}
+.token:before{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:#fff;top:-5px;left:4px;box-shadow:0 0 0 2px currentColor}.token span{transform:rotate(-45deg)}
+.p1{background:linear-gradient(135deg,#7f67ff,#4932b6)}.p2{background:linear-gradient(135deg,#ffad49,#e65a38)}
+@keyframes pop{from{transform:scale(.2) translateY(-9px)}to{transform:scale(1) translateY(0)}}
+.side{padding:18px;display:flex;flex-direction:column;gap:13px}
+.section-label{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:#858ba1;font-weight:1000;margin-bottom:5px}
+select,button{font:inherit;border:0;border-radius:14px;padding:12px 14px}
+select{background:#f0effa;color:var(--navy);width:100%;font-weight:900;outline:0;border:2px solid #e5e1fa}
+.turn{padding:12px 14px;border-radius:15px;background:linear-gradient(90deg,#f0edff,#fff5df);font-weight:1000;display:flex;align-items:center;gap:9px;min-height:48px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid white;box-shadow:0 1px 4px #0003}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:7px}
+.timer-box{background:linear-gradient(90deg,#fff0c8,#ffe2d5);border:2px solid #ffe1a8;border-radius:14px;padding:10px 13px;font-size:12px;font-weight:1000;color:#9a6331;display:flex;align-items:center;justify-content:space-between}
+.timer-box strong{font-size:24px;color:#d65c42;font-variant-numeric:tabular-nums}.timer-pulse{animation:timerPulse .45s ease-in-out 2}@keyframes timerPulse{50%{transform:scale(1.035);background:#ffe0b4}}
+.player-card{min-width:0}.player-card strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.player-card{background:#f7f7fc;padding:11px;border-radius:15px;border:2px solid transparent;transition:.2s}
+.player-card.active{border-color:#8b76ed;background:#f0edff;transform:translateY(-2px);box-shadow:0 5px 12px #7865d522}
+.player-card strong{display:flex;align-items:center;gap:5px;font-size:12px}
+.player-card .score{font-size:27px;font-weight:1000;line-height:1.25}.player-card small{color:#9297a8;font-weight:900}
+.dice-box{border-radius:19px;background:linear-gradient(145deg,#fff6d9,#ffe5b4);padding:13px;text-align:center;border:2px solid #ffedc7}
+.dice{width:83px;height:83px;margin:0 auto 6px;background:#fff;border-radius:19px;box-shadow:0 8px 16px #9e6e3440,inset 0 -4px #eee7db;display:grid;place-items:center;font-size:57px;transition:transform .2s}
+.dice.rolling{animation:shake .45s ease-in-out}
+@keyframes shake{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-17deg) scale(1.08)}75%{transform:rotate(17deg) scale(1.08)}}
+.dice-caption{font-weight:1000;color:#755a34;margin-bottom:10px}
+.roll{background:linear-gradient(135deg,#8168f3,#5a45c8);color:white;font-weight:1000;width:100%;cursor:pointer;box-shadow:0 6px 0 #4633a4,0 10px 18px #6c58c944;transition:.12s}
+.roll:hover{filter:brightness(1.07);transform:translateY(-2px)}.roll:active{transform:translateY(3px);box-shadow:0 3px 0 #4633a4}.roll:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.status{background:#f5f5fb;border:2px solid #ececf6;border-radius:15px;padding:12px;min-height:67px;font-size:13px;line-height:1.45;color:#555e7a;font-weight:800}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:12px;color:#727b91;font-weight:900}.legend div{background:#fafaff;border-radius:10px;padding:7px}
+.reset{background:#ececf5;color:#555b75;font-weight:1000;cursor:pointer}.reset:hover{background:#e2e0f2}
+.rules{font-size:11px;color:#7b8298;line-height:1.5}
+.win-overlay{position:fixed;inset:0;background:#15152ebd;display:none;place-items:center;z-index:10;padding:20px}
+.win-overlay.show{display:grid}.win-card{background:#fff;border:5px solid #ffe18c;border-radius:28px;padding:30px;text-align:center;max-width:340px;width:100%;box-shadow:0 20px 70px #0005;animation:pop .4s}
+.win-card .trophy{font-size:64px}.win-card h2{font:800 34px 'Baloo 2';margin:0;color:#5141a9}.win-card p{color:#69718b;font-weight:800}
+.win-card button{background:#7159df;color:white;font-weight:1000;cursor:pointer;width:100%}
+@media(max-width:780px){.shell{grid-template-columns:1fr;max-width:590px}.side{order:-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}.side>.full{grid-column:1/-1}.dice-box{grid-row:span 2}.board-panel{padding:8px}.board{gap:2px;padding:5px}.cell{padding:2px}.dice{width:68px;height:68px;font-size:46px}}
+@media(max-width:430px){.shell{padding:8px}.side{padding:12px;gap:8px}.player-card{padding:8px}.player-card .score{font-size:23px}.turn{font-size:13px}.dice{width:58px;height:58px;font-size:40px}.rules{font-size:10px}}
+
+.home-screen{min-height:100vh;display:grid;place-items:center;padding:24px;position:relative;z-index:2}
+.home-card{width:min(900px,100%);min-height:560px;border:4px solid #fff;border-radius:34px;background:linear-gradient(145deg,#fffdf4ee,#f4f0ffed);box-shadow:0 24px 70px #33305c35;display:grid;grid-template-columns:1.05fr .95fr;overflow:hidden}
+.home-copy{padding:clamp(28px,5vw,58px);display:flex;flex-direction:column;justify-content:center}
+.game-kicker{font-size:12px;font-weight:1000;letter-spacing:2.5px;color:#8a6b38;text-transform:uppercase}
+.home-title{font:800 clamp(42px,7vw,72px)/.92 'Baloo 2',sans-serif;color:#2d285a;margin:14px 0 12px;letter-spacing:-2px}
+.home-title span{color:#e66f52}
+.home-subtitle{font-size:16px;line-height:1.55;color:#68708a;font-weight:800;max-width:390px}
+.home-actions{display:grid;gap:12px;margin-top:26px;max-width:310px}
+.home-btn{padding:15px 20px;border-radius:16px;font-weight:1000;font-size:16px;cursor:pointer;transition:.15s}
+.home-btn:hover{transform:translateY(-3px);filter:brightness(1.04)}
+.play-btn{background:linear-gradient(135deg,#8068f0,#5743c5);color:#fff;box-shadow:0 6px 0 #40309b,0 12px 20px #6552bd40}
+.rules-btn{background:#fff;color:#5b4da1;border:2px solid #ded8ff;box-shadow:0 4px 0 #e4dff5}
+.home-note{font-size:11px;color:#9699aa;font-weight:800;margin-top:18px}
+.home-art{position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 48%,#fff4c9 0 22%,transparent 23%),linear-gradient(145deg,#c8eee0,#d8d1ff 60%,#ffe0b2);overflow:hidden}
+.home-art:before,.home-art:after{content:"";position:absolute;border-radius:50%;background:#ffffff55}
+.home-art:before{width:300px;height:300px;right:-100px;top:-100px}.home-art:after{width:240px;height:240px;left:-100px;bottom:-80px}
+.art-board{width:min(82%,370px);aspect-ratio:1;background:#f9e7b4;border:9px solid #fff;border-radius:25px;box-shadow:0 20px 40px #37305c35;transform:rotate(5deg);position:relative;padding:12px;display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.art-square{border-radius:7px;background:#e3f5e7;box-shadow:inset 0 -3px #c5d9c9}
+.art-square:nth-child(3n){background:#ffe7d7}.art-square:nth-child(4n){background:#e5eaff}
+.art-snake{position:absolute;font-size:clamp(55px,10vw,100px);filter:drop-shadow(0 6px 3px #0002);transform:rotate(-22deg);left:10%;top:15%}
+.art-ladder{position:absolute;font-size:clamp(55px,10vw,100px);filter:drop-shadow(0 6px 3px #0002);transform:rotate(25deg);right:7%;bottom:12%}
+.art-die{position:absolute;bottom:7%;left:9%;font-size:60px;filter:drop-shadow(0 8px 5px #0003);transform:rotate(-12deg)}
+.rules-overlay{position:fixed;inset:0;background:#17152dbb;display:none;place-items:center;padding:18px;z-index:20}
+.rules-overlay.show{display:grid}
+.rules-card{width:min(520px,100%);max-height:85vh;overflow:auto;background:#fffdf5;border:4px solid #fff;border-radius:25px;padding:25px;box-shadow:0 20px 60px #0005}
+.rules-card h2{font:800 32px 'Baloo 2';color:#5544ae;margin:0 0 5px}
+.rules-card p,.rules-card li{color:#626b84;font-weight:750;line-height:1.55;font-size:14px}
+.rules-card ul{padding-left:22px}.rules-close{width:100%;background:#7058dc;color:white;font-weight:1000;cursor:pointer;margin-top:8px}
+@media(max-width:680px){.home-card{grid-template-columns:1fr;min-height:0}.home-copy{padding:32px 27px}.home-art{min-height:270px;grid-row:1}.art-board{width:230px}.home-title{font-size:50px}.home-actions{max-width:none}.home-subtitle{font-size:14px}}
+
+
+@keyframes finishSnakeBlink { 0%,49% { opacity:1; filter:drop-shadow(0 0 3px #ff3030); } 50%,100% { opacity:.12; filter:none; } }
+.finish-snake-blink { animation:finishSnakeBlink .72s steps(2,start) infinite; }
+</style></head>
+<body>
+<section class="home-screen" id="homeScreen">
+ <div class="home-card">
+  <div class="home-copy">
+   <div class="game-kicker">⚡ The board game with a twist</div>
+   <h1 class="home-title">UNFAIR<br><span>SNAKES</span><br>& LADDERS</h1>
+   <div class="home-subtitle">Think you can beat the board? Snakes are sneaky, ladders are tempting, and luck is never on your side. Every roll is a new surprise!</div>
+   <div class="home-actions">
+    <button class="home-btn play-btn" id="homePlay">▶ PLAY GAME</button>
+    <button class="home-btn rules-btn" id="readRules">📜 READ UNFAIR RULES</button>
+   </div>
+   <div class="home-note">1–10 PLAYERS · LIVE SNAKE SHIFTS · UNPREDICTABLE FUN</div>
+  </div>
+  <div class="home-art">
+   <div class="art-board">
+    <div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div>
+    <div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div>
+    <div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div>
+    <div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div>
+    <div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div><div class="art-square"></div>
+    <div class="art-snake">🐍</div><div class="art-ladder">🪜</div><div class="art-die">🎲</div>
+   </div>
+  </div>
+ </div>
+</section>
+<div class="rules-overlay" id="rulesOverlay">
+ <div class="rules-card">
+  <h2>📜 Unfair Rules</h2>
+  <p>Welcome to the least fair board game ever. Here's how to survive:</p>
+  <ul>
+   <li><b>Reach exactly 100</b> to win. Overshoot and you don't move.</li>
+   <li><b>Snakes are ruthless:</b> land on a snake's head and slide all the way down.</li>
+   <li><b>Only three ladders start red:</b> red ladders send you down when you land on their top square; their bottom square is safe. Green ladders take you up from their bottom square.</li>
+   <li><b>Ladder chaos:</b> every 50 seconds, exactly one randomly selected ladder changes both endpoints by 1–7 squares. It may also change from green/up to red/down or red/down to green/up. There are never more than three red ladders. Ladder effects can chain with snakes and other ladders.</li>
+   <li><b>1 to 10 players:</b> choose how many people are playing. Players take turns in order; one player can play solo.</li>
+   <li><b>25-second chaos timer:</b> every 25 seconds, only one or two snakes move to nearby positions.</li>
+   <li><b>Same snake length:</b> when a snake moves, its mouth shifts only 1–7 numbered squares nearby, and its tail follows by the same amount. Its length stays exactly the same.</li>
+   <li><b>No safe squares for snakes except the ends:</b> a snake's mouth and tail can move anywhere from square 2 to 99, never square 1 or 100.</li>
+   <li><b>Surprise attack:</b> if a snake's new mouth appears on a player's current square, that snake eats the player and drops them at its tail.</li>
+   <li><b>Snake bite:</b> landing on a snake's mouth also sends you to its tail.</li>
+   <li><b>Independent snake movement:</b> when a snake moves, its mouth and tail each shift independently by 1–7 squares. Its numerical length can change.</li>
+   <li><b>Temporary blinking finish snake:</b> when a player reaches 99, a blinking snake appears on 100 only 3 times out of 10. It vanishes after 50 seconds. Its tail is usually in the 40–60 range (50%), 20–39 (30%), 2–19 (10%), or 61–69 (5%). In the rare 5% golden-snake outcome, its tail reaches 100 and landing on 100 wins.</li>
+   <li><b>Loop escape:</b> if chained snakes and ladders send you around a loop, you stay on the loop square and your next roll moves normally.</li>
+   <li><b>15-second auto-play:</b> if the current player does not roll within 15 seconds, the dice roll automatically and that player's move is played.</li>
+   <li><b>One roll per turn:</b> no bonus roll for rolling a six.</li>
+  </ul>
+  <p>Ready? Don't blame the dice. 🎲</p>
+  <button class="home-btn rules-close" id="closeRules">GOT IT — LET'S PLAY</button>
+ </div>
+</div>
+
+<div id="gameScreen" style="display:none"><header><h1>🐍 Unfair Snakes & Ladders 🪜</h1><p>Roll the dice · Climb the ladders · Avoid the snakes!</p></header>
+<main class="shell">
+<section class="panel board-panel"><div class="board-top"><span>🏰 ADVENTURE BOARD</span><span>FINISH → 100 🏆</span></div><div class="board" id="board"></div></section>
+<aside class="panel side">
+ <div class="full"><div class="section-label">Number of players</div><select id="playerCount"><option value="1">1 Player</option><option value="2" selected>2 Players</option><option value="3">3 Players</option><option value="4">4 Players</option><option value="5">5 Players</option><option value="6">6 Players</option><option value="7">7 Players</option><option value="8">8 Players</option><option value="9">9 Players</option><option value="10">10 Players</option></select></div>
+ <div class="timer-box full">⏳ SNAKES MOVE IN <strong id="timer">25</strong> SECONDS</div>
+ <div class="turn full" id="turn"><span class="dot p1"></span> Player 1's turn</div>
+ <div class="players full" id="players"></div>
+ <div class="dice-box"><div class="dice" id="dice">⚄</div><div class="dice-caption" id="diceText">Ready to roll?</div><button class="roll" id="roll">🎲 ROLL DICE</button></div>
+ <div class="status" id="status" aria-live="polite">✨ Player 1, roll the dice to begin your adventure!</div>
+ <div class="legend full"><div>🪜 Green = climb up · 🟥 Red = slide down</div><div>🐍 Snake = slide down</div></div>
+ <button class="reset full" id="reset">↻ START NEW GAME</button>
+ <div class="rules full"><b>Rules:</b> Reach exactly square 100 to win. A roll beyond 100 means you stay where you are. Landing on a ladder moves you up; landing on a snake sends you down. Every 25 seconds, 1 or 2 snakes move. Every 50 seconds, one ladder moves and may switch color. Only 3 red ladders maximum. Each moving snake's mouth and tail move independently by 1 to 7 numbered squares. Its numerical length can change. Neither its head nor tail can land on 1 or 100. If a moving snake's mouth appears under a player, it eats that player and drops them at its tail. Have fun!</div>
+</aside></main></div>
+<div class="win-overlay" id="win"><div class="win-card"><div class="trophy">🏆🎉</div><h2 id="winner">You won!</h2><p>What an adventure! Ready for another round?</p><button id="again">PLAY AGAIN</button></div></div>
+<script>
+// Normal ladders map bottom -> top. Red ladders map top -> bottom.
+const upLadders={3:22,20:41,51:67,71:91,80:99};
+const downLadders={30:8,55:28,57:36};
+function ladderAt(square){
+ if(Object.prototype.hasOwnProperty.call(upLadders,square))return {type:'up',to:upLadders[square]};
+ if(Object.prototype.hasOwnProperty.call(downLadders,square))return {type:'down',to:downLadders[square]};
+ return null;
+}
+function ladderEndpointSet(){
+ return new Set([...Object.entries(upLadders).flat(),...Object.entries(downLadders).flat()].map(Number));
+}
+let snakes={17:7,54:34,62:19,64:60,87:24,93:73,95:75,98:79};
+const board=document.getElementById('board'),cells={};
+for(let row=9;row>=0;row--){for(let c=0;c<10;c++){const n=row%2===0?row*10+c+1:row*10+10-c;const el=document.createElement('div');el.className='cell';el.dataset.n=n;
+ if(ladderAt(n)){el.classList.add(ladderAt(n).type==='up'?'ladder':'red-ladder');el.textContent=n}else if(snakes[n]){el.classList.add('snake');el.textContent=n}else el.textContent=n;
+ const tokens=document.createElement('div');tokens.className='tokens';el.appendChild(tokens);board.appendChild(el);cells[n]=tokens;}}
+
+// Draw detailed, recognizable wooden ladders and cartoon snakes as SVG artwork.
+const NS='http://www.w3.org/2000/svg';
+const art=document.createElementNS(NS,'svg');
+art.setAttribute('class','route-art');
+art.setAttribute('viewBox','0 0 100 100');
+art.setAttribute('preserveAspectRatio','none');
+function svgEl(tag,attrs,parent=art){
+ const e=document.createElementNS(NS,tag);
+ Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+ parent.appendChild(e);return e;
+}
+function xy(square){
+ const row=Math.floor((square-1)/10),offset=(square-1)%10;
+ const col=row%2===0?offset:9-offset;
+ return {x:(col+.5)*10,y:(9-row+.5)*10};
+}
+function drawBoardArt(snakeRenderData=null){
+ art.innerHTML='';
+ // Ladders: two thick wooden side rails, shaded edges, visible rungs and end caps.
+ [...Object.entries(upLadders).map(([from,to])=>({from:+from,to,type:'up'})),
+  ...Object.entries(downLadders).map(([from,to])=>({from:+from,to,type:'down'}))].forEach(({from,to,type},i)=>{
+ const a=xy(from),b=xy(to),dx=b.x-a.x,dy=b.y-a.y;
+ const rail=type==='down'?'#b51f2e':'#713b20', railLight=type==='down'?'#ff6470':'#c9824b', rung=type==='down'?'#d52d3d':'#75401f', rungLight=type==='down'?'#ff9aa1':'#d9955c';
+ const len=Math.hypot(dx,dy),px=-dy/len*1.45,py=dx/len*1.45;
+ const rails=[
+  {x1:a.x+px,y1:a.y+py,x2:b.x+px,y2:b.y+py},
+  {x1:a.x-px,y1:a.y-py,x2:b.x-px,y2:b.y-py}
+ ];
+ rails.forEach(r=>{
+  svgEl('line',{...r,stroke:rail,'stroke-width':'1.9','stroke-linecap':'round'});
+  svgEl('line',{x1:r.x1-.22,y1:r.y1-.22,x2:r.x2-.22,y2:r.y2-.22,stroke:railLight,'stroke-width':'.72','stroke-linecap':'round'});
+ });
+ for(let t=.08;t<.96;t+=.145){
+  const x=a.x+dx*t,y=a.y+dy*t;
+  svgEl('line',{x1:x-px*1.14,y1:y-py*1.14,x2:x+px*1.14,y2:y+py*1.14,stroke:rung,'stroke-width':'1.35','stroke-linecap':'round'});
+  svgEl('line',{x1:x-px*.98,y1:y-py*.98,x2:x+px*.98,y2:y+py*.98,stroke:rungLight,'stroke-width':'.48','stroke-linecap':'round'});
+ }
+ [a,b].forEach(pt=>{
+  svgEl('circle',{cx:pt.x+px,cy:pt.y+py,r:'.85',fill:type==='down'?'#ff8b94':'#e5a36a'});
+  svgEl('circle',{cx:pt.x-px,cy:pt.y-py,r:'.85',fill:type==='down'?'#ff8b94':'#e5a36a'});
+ });
+});
+ // Snakes: tapered-looking colored bodies, cream belly, scale markings, expressive heads and forked tongues.
+ const snakeColors=[
+ {body:'#20a77c',edge:'#087456',light:'#9be2b6'},
+ {body:'#ef7657',edge:'#b84c3e',light:'#ffd29d'},
+ {body:'#8b69d8',edge:'#5c45a8',light:'#d9c7ff'},
+ {body:'#e6a13c',edge:'#a96624',light:'#ffe1a0'},
+ {body:'#25a6b5',edge:'#087c8b',light:'#a9edf0'},
+ {body:'#df6478',edge:'#a63e58',light:'#ffc1c8'},
+ {body:'#19a98d',edge:'#087461',light:'#a5ead3'},
+ {body:'#a16cc0',edge:'#69428a',light:'#e4c8f4'}
+];
+const snakeItems=snakeRenderData||Object.entries(snakes).map(([head,tail])=>{
+  if(Number(head)===100 && Number(tail)===100) return {head:specialSnakeVisualStart,tail:100,a:xy(specialSnakeVisualStart),b:xy(100),isFinish:true};
+  return {head:Number(head),tail:Number(tail),a:xy(Number(head)),b:xy(Number(tail)),isFinish:Number(head)===100};
+ });
+ snakeItems.forEach(({head,tail,a,b,isFinish},i)=>{
+ const dx=b.x-a.x,dy=b.y-a.y;
+ const bend=(i%2===0?1:-1)*Math.min(13,Math.max(6,Math.abs(dx)*.28+Math.abs(dy)*.09));
+ const c1={x:a.x+bend,y:a.y+dy*.28};
+ const c2={x:b.x-bend,y:b.y-dy*.28};
+ const d=`M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
+ const col=snakeColors[i%snakeColors.length];
+ // dark outline and colored body make the snake read as a rounded creature
+ svgEl('path',{d,class:isFinish?'finish-snake-blink':'',fill:'none',stroke:col.edge,'stroke-width':'5.0','stroke-linecap':'round','stroke-linejoin':'round'});
+ svgEl('path',{d,class:isFinish?'finish-snake-blink':'',fill:'none',stroke:col.body,'stroke-width':'4.05','stroke-linecap':'round','stroke-linejoin':'round'});
+ svgEl('path',{d,class:isFinish?'finish-snake-blink':'',fill:'none',stroke:col.light,'stroke-width':'1.0','stroke-linecap':'round','stroke-dasharray':'1.5 2.35',opacity:'.95'});
+ // Repeated little scale marks along the back
+ for(let t=.18;t<.9;t+=.12){
+  const mt=1-t;
+  const x=mt*mt*mt*a.x+3*mt*mt*t*c1.x+3*mt*t*t*c2.x+t*t*t*b.x;
+  const y=mt*mt*mt*a.y+3*mt*mt*t*c1.y+3*mt*t*t*c2.y+t*t*t*b.y;
+  svgEl('path',{d:`M ${x-.48} ${y-.48} q .48 -.55 .96 0`,class:isFinish?'finish-snake-blink':'',fill:'none',stroke:col.edge,'stroke-width':'.38','stroke-linecap':'round',opacity:'.7'});
+ }
+ // Head is aligned with the first part of the snake's body
+ const angle=Math.atan2(c1.y-a.y,c1.x-a.x)*180/Math.PI;
+ const headGroup=svgEl('g',{transform:`translate(${a.x} ${a.y}) rotate(${angle})`,class:isFinish?'finish-snake-blink':''});
+ svgEl('ellipse',{cx:0,cy:0,rx:2.65,ry:2.05,fill:col.edge,stroke:'#fff','stroke-width':'.48'},headGroup);
+ svgEl('ellipse',{cx:.1,cy:.15,rx:2.15,ry:1.55,fill:col.body},headGroup);
+ // two friendly eyes and pupils
+ [-.9,.9].forEach(ex=>{
+  svgEl('circle',{cx:ex,cy:-.82,r:.62,fill:'#fff'},headGroup);
+  svgEl('circle',{cx:ex+.12,cy:-.82,r:.28,fill:'#253047'},headGroup);
+ });
+ // tiny forked tongue points forward from the snout
+ svgEl('path',{d:'M 1.9 0 L 3.15 0 M 3.15 0 L 3.8 -.55 M 3.15 0 L 3.8 .55',fill:'none',stroke:'#e94f65','stroke-width':'.42','stroke-linecap':'round','stroke-linejoin':'round'},headGroup);
+ });
+}
+drawBoardArt();
+board.appendChild(art);
+let playerCount=2,positions=[0,0],turn=0,busy=false,finished=false;
+let timerValue=25,timerHandle=null,ladderTimerHandle=null,finishSnakeTimeout=null,specialSnakeVisualStart=40,autoTurnTimeout=null;
+const $=id=>document.getElementById(id),faces=['⚀','⚁','⚂','⚃','⚄','⚅'];
+const playerColors=['#7159df','#f08a36','#20a77c','#df6478','#2599b5','#9b69c8','#b58a28','#4b83d2','#cf6d39','#578d57'];
+function playerName(i){return `Player ${i+1}`}
+const playerTokens=[];
+function render(){
+ // Reuse the same DOM token for each player: no flicker between squares.
+ playerTokens.forEach((token,i)=>{
+  if(i>=positions.length || positions[i]<=0){token.remove();return;}
+  if(token.parentElement!==cells[positions[i]])cells[positions[i]].appendChild(token);
+ });
+ positions.forEach((p,i)=>{
+  if(p<=0)return;
+  if(!playerTokens[i]){
+   const t=document.createElement('span');t.className='token';
+   t.style.background=`linear-gradient(135deg,${playerColors[i]},${playerColors[i]}cc)`;
+   t.title=playerName(i);t.innerHTML=`<span>${i+1}</span>`;
+   playerTokens[i]=t;
+  }
+  if(playerTokens[i].parentElement!==cells[p])cells[p].appendChild(playerTokens[i]);
+ });
+ const cards=$('players');cards.innerHTML='';
+ positions.forEach((p,i)=>{
+  const card=document.createElement('div');card.className='player-card'+(turn===i&&!finished?' active':'');
+  const strong=document.createElement('strong');
+  const dot=document.createElement('span');dot.className='dot';dot.style.background=playerColors[i];
+  strong.append(dot,document.createTextNode(playerName(i)));
+  const score=document.createElement('div');score.innerHTML=`<span class="score">${p}</span><small> / 100</small>`;
+  card.append(strong,score);cards.appendChild(card);
+ });
+ $('turn').innerHTML=finished?'🏆 Game finished':`<span class="dot" style="background:${playerColors[turn]}"></span> ${playerName(turn)}'s turn`;
+}
+function message(s){$('status').textContent=s}const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function maybeSpawnFinishSnake(playerIndex){
+ // On reaching 99, the blinking finish-line snake appears only 3 times in 10.
+ if(positions[playerIndex]!==99 || Math.random()>=0.3 || snakes[100]!==undefined)return false;
+
+ // Weighted tail destinations: 50%, 30%, 10%, 5%, and 5% winning escape.
+ const roll=Math.random()*100;
+ let tail,rangeLabel;
+ if(roll<50){tail=40+Math.floor(Math.random()*21);rangeLabel='40–60';}
+ else if(roll<80){tail=20+Math.floor(Math.random()*20);rangeLabel='20–39';}
+ else if(roll<90){tail=2+Math.floor(Math.random()*18);rangeLabel='2–19';}
+ else if(roll<95){tail=61+Math.floor(Math.random()*9);rangeLabel='61–69';}
+ else {tail=100;rangeLabel='100 — safe finish';}
+
+ // The rare 5% result is drawn as a huge snake stretching to 100, but landing
+ // on 100 remains a win because its destination is also 100.
+ specialSnakeVisualStart=tail===100 ? 2+Math.floor(Math.random()*68) : 100;
+ snakes[100]=tail;
+ drawBoardArt();
+ message(tail===100
+  ? '✨ THE GOLDEN SNAKE! Its tail reaches 100 — landing on 100 is a WIN!'
+  : `🐍 BLINKING FINISH SNAKE! Tail at ${tail} (${rangeLabel}). It will vanish in 50 seconds!`);
+
+ if(finishSnakeTimeout)clearTimeout(finishSnakeTimeout);
+ finishSnakeTimeout=setTimeout(()=>{
+  if(snakes[100]!==undefined){
+   delete snakes[100];
+   drawBoardArt();
+   message('💨 The 100-square snake vanished after 50 seconds!');
+  }
+  finishSnakeTimeout=null;
+ },50000);
+ return true;
+}
+function checkWin(i){
+ if(positions[i]===100){
+  finished=true;stopSnakeTimer();render();message(`🏆 ${playerName(i)} reached 100 and wins!`);
+  $('diceText').textContent='WINNER! 🎉';$('winner').textContent=playerName(i)+' wins!';
+  $('win').classList.add('show');return true;
+ }
+ return false;
+}
+function startSnakeTimer(){
+ stopSnakeTimer();timerValue=25;$('timer').textContent=timerValue;
+ timerHandle=setInterval(()=>{
+  if(finished)return;
+  timerValue--;
+  $('timer').textContent=timerValue;
+  if(timerValue<=0){relocateSnakes();timerValue=25;$('timer').textContent=timerValue;}
+ },1000);
+ startLadderTimer();
+}
+function stopSnakeTimer(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}stopLadderTimer();}
+let snakeRelocationBusy=false;
+function animateSnakeMovement(oldSnakes,newSnakes,movedHeads,duration=950){
+ // Keep each snake's identity while it slithers from its old squares to its new squares.
+ // movedHeads contains the independently selected destination for each moving snake.
+ const oldEntries=Object.entries(oldSnakes);
+ const records=oldEntries.map(([oldHead,oldTail])=>{
+  const targetHead=String(movedHeads[oldHead]?.head??oldHead);
+  const targetTail=movedHeads[oldHead]?.tail??oldTail;
+  return {
+   fromA:xy(Number(oldHead)),fromB:xy(Number(oldTail)),
+   toA:xy(Number(targetHead)),toB:xy(Number(targetTail))
+  };
+ });
+ const started=performance.now();
+ return new Promise(resolve=>{
+  function frame(now){
+   const t=Math.min(1,(now-started)/duration);
+   const eased=1-Math.pow(1-t,3);
+   const renderData=records.map((r,i)=>({
+    head:Number(oldEntries[i][0]),tail:Number(oldEntries[i][1]),
+    a:{x:r.fromA.x+(r.toA.x-r.fromA.x)*eased,y:r.fromA.y+(r.toA.y-r.fromA.y)*eased},
+    b:{x:r.fromB.x+(r.toB.x-r.fromB.x)*eased,y:r.fromB.y+(r.toB.y-r.fromB.y)*eased}
+   }));
+   drawBoardArt(renderData);
+   if(t<1)requestAnimationFrame(frame);else resolve();
+  }
+  requestAnimationFrame(frame);
+ });
+}
+async function relocateSnakes(){
+ if(snakeRelocationBusy||finished)return;
+ snakeRelocationBusy=true;
+ const oldSnakes={...snakes},entries=Object.entries(snakes).filter(([head])=>Number(head)!==100);
+ if(!entries.length){snakeRelocationBusy=false;return;}
+ // Only one or two snakes move at each 25-second cycle.
+ const moveCount=Math.min(entries.length,Math.random()<.5?1:2);
+ const chosenIndices=new Set();
+ while(chosenIndices.size<moveCount)chosenIndices.add(Math.floor(Math.random()*entries.length));
+ const next={...snakes},movedEndpoints={};
+ const ladderSquares=ladderEndpointSet();
+ const occupied=new Set();
+ // Reserve all endpoints belonging to snakes that are not moving.
+ entries.forEach(([head,tail],i)=>{
+  if(!chosenIndices.has(i)){occupied.add(Number(head));occupied.add(Number(tail));}
+ });
+ // Move each selected snake a short distance along the numbered board.
+ for(const i of chosenIndices){
+  const [headText,tailText]=entries[i],head=Number(headText),tail=Number(tailText);
+  let candidates=[];
+  // Mouth and tail each move independently by 1–7 numbered squares.
+  // The snake's numerical length is intentionally allowed to change.
+  for(let headStep=1;headStep<=7;headStep++){
+   for(const headSign of [-1,1]){
+    const newHead=head+headStep*headSign;
+    if(newHead<2||newHead>99||ladderSquares.has(newHead)||occupied.has(newHead))continue;
+    for(let tailStep=1;tailStep<=7;tailStep++){
+     for(const tailSign of [-1,1]){
+      const newTail=tail+tailStep*tailSign;
+      if(newTail<2||newTail>99||newTail===newHead)continue;
+      if(ladderSquares.has(newTail)||occupied.has(newTail))continue;
+      candidates.push([newHead,newTail]);
+     }
+    }
+   }
+  }
+  if(!candidates.length)continue;
+  const [newHead,newTail]=candidates[Math.floor(Math.random()*candidates.length)];
+  delete next[headText];next[newHead]=newTail;
+  movedEndpoints[headText]={head:newHead,tail:newTail};
+  occupied.add(newHead);occupied.add(newTail);
+ }
+ // No snake changes if all selected snakes were blocked by safe-placement rules.
+ if(JSON.stringify(next)===JSON.stringify(oldSnakes)){
+  message('🐍 The snakes tried to move, but had no safe nearby spot this round.');
+  snakeRelocationBusy=false;return;
+ }
+ $('timer').classList.add('timer-pulse');
+ message(`🐍 ${moveCount} snake${moveCount>1?'s are':' is'} slithering to a nearby square...`);
+ await animateSnakeMovement(oldSnakes,next,movedEndpoints,1000);
+ snakes=next;
+ drawBoardArt();
+ $('timer').classList.remove('timer-pulse');
+ // A moving snake can catch a player if its new mouth lands on them.
+ let caught=[];
+ positions.forEach((pos,i)=>{
+  if(pos>0&&Object.prototype.hasOwnProperty.call(snakes,pos)){
+   const landing=snakes[pos];positions[i]=landing;
+   caught.push(`${playerName(i)} was caught at ${pos} and dropped at ${landing}`);
+  }
+ });
+ render();
+ message(caught.length?`🐍 SNAKE ATTACK! ${caught.join('; ')}.`:`🐍 ${moveCount} snake${moveCount>1?'s have':' has'} moved nearby. Keep watch!`);
+ snakeRelocationBusy=false;
+}
+
+
+function shuffleLadderGroup(group,type){
+ const entries=Object.entries(group);
+ const reserved=new Set([...Object.entries(snakes).flat().map(Number)]);
+ const ownEndpoints=new Set(entries.flatMap(([a,b])=>[Number(a),Number(b)]));
+ const otherEndpoints=new Set([
+  ...Object.entries(type==='up'?downLadders:upLadders).flat().map(Number)
+ ]);
+ ownEndpoints.forEach(n=>reserved.delete(n));
+ otherEndpoints.forEach(n=>reserved.add(n));
+ const next={};
+ for(const [aText,bValue] of entries){
+  const a=Number(aText),b=Number(bValue);
+  let chosen=null;
+  const candidates=[];
+  for(let da=1;da<=7;da++)for(const sa of [-1,1]){
+   for(let db=1;db<=7;db++)for(const sb of [-1,1]){
+    const na=a+da*sa,nb=b+db*sb;
+    if(na<2||na>99||nb<2||nb>99||na===nb)continue;
+    if(type==='up'&&na>=nb)continue;
+    if(type==='down'&&na<=nb)continue;
+    if(reserved.has(na)||reserved.has(nb))continue;
+    candidates.push([na,nb]);
+   }
+  }
+  if(candidates.length)chosen=candidates[Math.floor(Math.random()*candidates.length)];
+  const [na,nb]=chosen||[a,b];
+  reserved.add(na);reserved.add(nb);
+  next[na]=nb;
+ }
+ Object.keys(group).forEach(k=>delete group[k]);
+ Object.assign(group,next);
+}
+function shuffleLadders(){
+ if(finished)return;
+ // Move one physical ladder. Its two endpoints shift independently 1–7 squares.
+ // A color flip reverses the ladder's travel direction, without requiring the
+ // nearby endpoints to swap numerical order (which was previously impossible).
+ const all=[...Object.entries(upLadders).map(([from,to])=>({from:+from,to:+to,type:'up'})),
+            ...Object.entries(downLadders).map(([from,to])=>({from:+from,to:+to,type:'down'}))];
+ if(!all.length)return;
+ const selected=all[Math.floor(Math.random()*all.length)];
+ const redCount=Object.keys(downLadders).length;
+ const flip=Math.random()<.4 && (selected.type==='down'||redCount<3);
+ const newType=flip?(selected.type==='up'?'down':'up'):selected.type;
+ const reserved=new Set([...Object.entries(snakes).flat().map(Number)]);
+ for(const [a,b] of [...Object.entries(upLadders),...Object.entries(downLadders)]){
+  if(+a!==selected.from){reserved.add(+a);reserved.add(+b);}
+ }
+ const candidates=[];
+ for(let da=1;da<=7;da++)for(const sa of [-1,1])
+  for(let db=1;db<=7;db++)for(const sb of [-1,1]){
+   const x=selected.from+da*sa,y=selected.to+db*sb;
+   if(x<2||x>99||y<2||y>99||x===y||reserved.has(x)||reserved.has(y))continue;
+   // x and y are the same physical ends as before; preserve their relative
+   // height, then change which end is the entrance if color flips.
+   if(selected.type==='up'&&x>=y)continue;
+   if(selected.type==='down'&&x<=y)continue;
+   candidates.push([x,y]);
+  }
+ if(!candidates.length){message('🪜 Ladder could not find two safe nearby squares.');return;}
+ const [x,y]=candidates[Math.floor(Math.random()*candidates.length)];
+ const oldGroup=selected.type==='up'?upLadders:downLadders;
+ const newGroup=newType==='up'?upLadders:downLadders;
+ delete oldGroup[selected.from];
+ // Green maps low -> high; red maps high -> low.
+ const low=Math.min(x,y),high=Math.max(x,y);
+ newGroup[newType==='up'?low:high]=newType==='up'?high:low;
+ drawBoardArt();
+ message(`🪜 One ladder moved to ${low}–${high}${flip?` and changed to ${newType==='up'?'GREEN (up)':'RED (down)'}`:''}!`);
+}
+
+function startLadderTimer(){
+ stopLadderTimer();
+ ladderTimerHandle=setInterval(shuffleLadders,50000);
+}
+function stopLadderTimer(){
+ if(ladderTimerHandle){clearInterval(ladderTimerHandle);ladderTimerHandle=null;}
+}
+async function resolveLanding(playerIndex,startSquare){
+ // Resolve chained snake/ladder effects. Repeated squares mean a loop;
+ // stop at that square and let the next dice roll move the player normally.
+ let square=startSquare;
+ const visited=new Set();
+ for(let step=0;step<30;step++){
+  if(visited.has(square)){
+   positions[playerIndex]=square;render();
+   message(`🔁 Loop detected at ${square}. Player stays there; next roll moves normally.`);
+   return;
+  }
+  visited.add(square);
+  if(Object.prototype.hasOwnProperty.call(snakes,square)){
+   const destination=Number(snakes[square]);
+   if(square===100 && destination===100){positions[playerIndex]=100;return;}
+   positions[playerIndex]=destination;render();
+   message(`🐍 Snake! ${playerName(playerIndex)} slides from ${square} to ${destination}.`);
+   await wait(300);square=destination;continue;
+  }
+  const ladder=ladderAt(square);
+  if(ladder){
+   if(ladder.type==='up'){
+    positions[playerIndex]=ladder.to;render();
+    message(`🪜 Green ladder! ${playerName(playerIndex)} climbs from ${square} to ${ladder.to}.`);
+    await wait(300);square=ladder.to;continue;
+   }
+   if(ladder.type==='down'){
+    positions[playerIndex]=ladder.to;render();
+    message(`🟥 Red ladder! ${playerName(playerIndex)} slides down from ${square} to ${ladder.to}.`);
+    await wait(300);square=ladder.to;continue;
+   }
+  }
+  positions[playerIndex]=square;render();return;
+ }
+ positions[playerIndex]=square;render();
+ message(`🔁 Too many chained moves. Player stays at ${square}; next roll moves normally.`);
+}
+
+function clearAutoTurn(){
+ if(autoTurnTimeout){clearTimeout(autoTurnTimeout);autoTurnTimeout=null;}
+}
+function scheduleAutoTurn(){
+ clearAutoTurn();
+ if(finished||busy)return;
+ autoTurnTimeout=setTimeout(()=>{
+  autoTurnTimeout=null;
+  if(!finished&&!busy&&!snakeRelocationBusy){
+   message(`⏱️ ${playerName(turn)} did not play within 15 seconds. Dice rolling automatically!`);
+   play(true);
+  }
+ },15000);
+}
+async function play(isAutomatic=false){
+ if(busy||finished||snakeRelocationBusy)return;
+ clearAutoTurn();
+ busy=true;$('roll').disabled=true;
+ const current=turn,roll=Math.floor(Math.random()*6)+1;
+ $('dice').classList.add('rolling');
+ for(let i=0;i<8;i++){$('dice').textContent=faces[Math.floor(Math.random()*6)];await wait(65)}
+ $('dice').classList.remove('rolling');$('dice').textContent=faces[roll-1];$('diceText').textContent=`You rolled ${roll}!`;await wait(300);
+ const old=positions[current],next=old+roll;
+ if(next<=100){
+  message(`${playerName(current)} rolled ${roll}. Moving one square at a time...`);
+  for(let square=old+1;square<=next;square++){
+   positions[current]=square;render();
+   message(`🎲 ${playerName(current)} moves to ${square} (${square-old} of ${roll}).`);
+   await wait(190);
+  }
+  await wait(180);
+  await resolveLanding(current,next);
+  await wait(250);
+ }else message(`🎲 ${playerName(current)} rolled ${roll}, but needs ${100-old}. Stay on ${old}.`);
+ if(positions[current]===99)maybeSpawnFinishSnake(current);
+ if(checkWin(current)){busy=false;clearAutoTurn();return;}
+ turn=(turn+1)%playerCount;render();busy=false;$('roll').disabled=false;
+ scheduleAutoTurn();
+}
+function reset(){
+ clearAutoTurn();
+ if(finishSnakeTimeout){clearTimeout(finishSnakeTimeout);finishSnakeTimeout=null;}
+ $('win').classList.remove('show');positions=Array(playerCount).fill(0);turn=0;busy=false;finished=false;
+ specialSnakeVisualStart=40;
+ snakes={17:7,54:34,62:19,64:60,87:24,93:73,95:75,98:79};
+ for(const k of Object.keys(upLadders))delete upLadders[k];Object.assign(upLadders,{3:22,20:41,51:67,71:91,80:99});for(const k of Object.keys(downLadders))delete downLadders[k];Object.assign(downLadders,{30:8,55:28,57:36});
+ drawBoardArt();$('dice').textContent='⚄';$('diceText').textContent='Ready to roll?';$('roll').disabled=false;
+ render();message('✨ New game! Player 1, roll the dice! You have 15 seconds before auto-roll.');startSnakeTimer();scheduleAutoTurn();
+}
+$('roll').addEventListener('click',()=>play());
+$('reset').addEventListener('click',reset);
+$('again').addEventListener('click',reset);
+$('playerCount').addEventListener('change',()=>{playerCount=Number($('playerCount').value);reset();});
+$('homePlay').addEventListener('click',()=>{$('homeScreen').style.display='none';$('gameScreen').style.display='block';reset();window.scrollTo({top:0,behavior:'smooth'});});
+$('readRules').addEventListener('click',()=>$('rulesOverlay').classList.add('show'));
+$('closeRules').addEventListener('click',()=>$('rulesOverlay').classList.remove('show'));
+$('rulesOverlay').addEventListener('click',e=>{if(e.target===$('rulesOverlay'))$('rulesOverlay').classList.remove('show')});
+playerCount=Number($('playerCount').value);render();
+</script></body></html>
